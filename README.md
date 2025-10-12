@@ -1,21 +1,24 @@
 # Terminal Coding Agent
 
-A TypeScript terminal application built with modern CLI tools.
+A powerful TypeScript terminal application that lets you browse and reference project files using intuitive "@" mentions. Built with modern CLI tools for a seamless coding experience.
 
-## Features
+## ✨ Features
 
 - 🚀 TypeScript with strict type checking
-- 🎨 Colored terminal output with chalk
-- 💬 Interactive prompts with inquirer
+- 🎨 Beautiful colored terminal output with chalk
+- 📁 **File browser with autocomplete** - search and filter files as you type
+- 💬 **@ File mentions** - reference files naturally in your commands
+- ✏️ **Auto-open in editor** - selected files open directly in Cursor/VS Code
 - 📦 Modern ES modules support
 - 🔧 Hot reload development with tsx
 
-## Prerequisites
+## 📋 Prerequisites
 
 - Node.js 18+ 
 - npm or yarn
+- Cursor or VS Code (for file opening)
 
-## Installation
+## 🚀 Installation
 
 1. Clone the repository
 2. Install dependencies:
@@ -24,7 +27,91 @@ A TypeScript terminal application built with modern CLI tools.
 npm install
 ```
 
-## Development
+3. Build the project:
+
+```bash
+npm run build
+```
+
+4. Install globally (optional):
+
+```bash
+npm link
+```
+
+Now you can use `codebanger` from anywhere!
+
+## 💻 Usage
+
+### Interactive Mode (Default) - Real-Time @ Mentions
+
+Run the tool for inline file autocomplete:
+
+```bash
+codebanger
+```
+
+**How it works (just like Cursor chat!):**
+1. Start typing your command naturally
+2. Press **@** → autocomplete dropdown appears **instantly**
+3. Continue typing to filter files (e.g., "@src/")
+4. Use arrow keys and Enter to select file
+5. Selected file inserts into your command at the @ position
+6. Keep typing or add more "@" mentions
+7. Press Enter when done → files can be opened in Cursor/VS Code
+
+**Example workflow:**
+```
+💬 Your command: Add error handling to @
+  [@ triggers instant dropdown]
+  [Type "index" to filter]
+  [Select "src/index.ts"]
+💬 Your command: Add error handling to @src/index.ts
+  [Keep typing or press Enter]
+```
+
+**Multiple files:**
+```
+💬 Your command: Refactor @ and @ to use async/await
+  [First @ opens dropdown → select file1]
+  [Second @ opens dropdown → select file2]
+💬 Your command: Refactor @src/index.ts and @src/utils.ts to use async/await
+```
+
+### Quick File Browser
+
+Browse and open files without typing commands:
+
+```bash
+codebanger open
+```
+
+This gives you a quick file picker that:
+- Shows all project files (filtered by type)
+- Lets you search as you type
+- Opens files directly in your editor
+- Lets you open multiple files in succession
+
+## Project Structure
+
+```
+├── src/
+│   └── index.ts          # Main application entry point
+├── dist/                 # Compiled JavaScript output
+├── package.json          # Project dependencies and scripts
+├── tsconfig.json         # TypeScript configuration
+└── README.md            # This file
+```
+
+### Legacy Select Mode
+
+Original mode for selecting files first:
+
+```bash
+codebanger select
+```
+
+## 🛠️ Development
 
 ### Run in development mode (with hot reload)
 
@@ -38,76 +125,59 @@ npm run dev
 npm run build
 ```
 
-### Run the built application
-
-```bash
-npm start
-```
-
 ### Watch for changes during development
 
 ```bash
 npm run watch
 ```
 
-## Usage
-
-The application provides several commands:
-
-### Hello Command
+### Clean build artifacts
 
 ```bash
-npm run dev hello --name "Your Name"
+npm run clean
 ```
 
-or with the built version:
-
-```bash
-npm start hello --name "Your Name"
-```
-
-### Interactive Mode
-
-```bash
-npm run dev interactive
-```
-
-This will start an interactive session where you can:
-- Enter your name
-- Choose your favorite color
-- See colored output
-
-## Project Structure
-
-```
-├── src/
-│   └── index.ts          # Main application entry point
-├── dist/                 # Compiled JavaScript output
-├── package.json          # Project dependencies and scripts
-├── tsconfig.json         # TypeScript configuration
-└── README.md            # This file
-```
-
-## Available Scripts
+## 📜 Available Scripts
 
 - `npm run dev` - Run in development mode with tsx
 - `npm run build` - Compile TypeScript to JavaScript
-- `npm start` - Run the compiled application
+- `npm start` - Run the compiled application (same as `codebanger`)
 - `npm run watch` - Watch for changes and recompile
 - `npm run clean` - Remove the dist directory
 
-## Dependencies
+## 📦 Dependencies
 
 ### Runtime Dependencies
 - `commander` - Command-line interface framework
 - `chalk` - Terminal string styling
 - `inquirer` - Interactive command line prompts
+- `inquirer-autocomplete-prompt` - Autocomplete functionality
+- `@inquirer/prompts` - Modern inquirer prompts
 
 ### Development Dependencies
 - `typescript` - TypeScript compiler
 - `tsx` - TypeScript execution engine for development
 - `@types/node` - TypeScript definitions for Node.js
+- `@types/inquirer` - TypeScript definitions for inquirer
 - `rimraf` - Cross-platform rm -rf utility
+
+## 🎯 How It Works
+
+The tool scans your project directory and:
+1. Finds all relevant source files (`.ts`, `.js`, `.tsx`, `.jsx`, `.py`, `.css`, `.html`, `.json`, `.md`)
+2. Excludes `node_modules`, `dist`, and `.git` directories
+3. Provides fuzzy search/filtering as you type
+4. Opens selected files in your preferred editor (tries `cursor`, then `code`, then system default)
+
+## 🔧 Supported File Types
+
+- TypeScript/JavaScript: `.ts`, `.tsx`, `.js`, `.jsx`
+- Python: `.py`
+- Styles: `.css`
+- Markup: `.html`, `.md`
+- Config: `.json`
+
+Add more file types by editing the `getAllFiles()` function in `src/index.ts`.
 
 ## Contributing
 
