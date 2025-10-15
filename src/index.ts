@@ -164,7 +164,7 @@ async function smartInput(prompt: string): Promise<string> {
 
       // Detect @ symbol
       if (key === '@') {
-        // Pause raw mode
+        // Pause raw mode /*
         if (stdin.isTTY) stdin.setRawMode(false);
         stdin.removeListener('data', keyHandler);
         stdin.pause();
@@ -213,7 +213,7 @@ async function smartInput(prompt: string): Promise<string> {
 // Interactive prompt with @ mentions for files
 async function interactivePrompt(): Promise<void> {
   console.log(chalk.cyan('╔════════════════════════════════════════════════════════════╗'));
-  console.log(chalk.cyan('║') + chalk.bold('  Terminal Coding Agent - Interactive Mode') + '              ' + chalk.cyan('║'));
+  console.log(chalk.cyan('║') + chalk.bold('  Codebanger - Interactive Mode') + '              ' + chalk.cyan('║'));
   console.log(chalk.cyan('╚════════════════════════════════════════════════════════════╝'));
   console.log(chalk.gray('\nType your instructions. Type @ to instantly select files.'));
   console.log(chalk.gray('Type "exit" or "quit" to end the session.\n'));

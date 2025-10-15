@@ -18,7 +18,41 @@ A powerful TypeScript terminal application that lets you browse and reference pr
 - npm or yarn
 - Cursor or VS Code (for file opening)
 
+## 🐳 Development Environment
+
+This project includes a **devcontainer configuration** for instant setup in GitHub Codespaces or VS Code Dev Containers:
+
+### Using GitHub Codespaces (Recommended for Quick Start)
+
+1. Click "Code" → "Create codespace on main"
+2. Wait for the container to build (~30 seconds)
+3. The `codebanger` command is automatically installed and ready to use!
+
+**What happens automatically:**
+- Docker container spins up with Node.js 20 and TypeScript tooling
+- Dependencies are installed (`npm install`)
+- Project is built (`npm run build`)
+- Command is linked globally (`npm link`)
+
+### Using VS Code Dev Containers (Local Docker)
+
+1. Install Docker Desktop and the "Dev Containers" VS Code extension
+2. Open the project in VS Code
+3. Click "Reopen in Container" when prompted
+4. The `codebanger` command will be ready after the container builds
+
+### Why DevContainers?
+
+- **Consistency** - Same environment for all contributors
+- **Zero setup** - New team members can start coding immediately
+- **Isolation** - Project dependencies don't conflict with your system
+- **Reproducibility** - Works identically across all machines
+
+The devcontainer uses Microsoft's official `typescript-node` image, which is maintained for security and includes common development tools. For projects requiring specialized dependencies, this could be customized with a Dockerfile.
+
 ## 🚀 Installation
+
+### Manual Installation (Without DevContainers)
 
 1. Clone the repository
 2. Install dependencies:
@@ -40,6 +74,8 @@ npm link
 ```
 
 Now you can use `codebanger` from anywhere!
+
+> **Note:** If using GitHub Codespaces or Dev Containers, these steps happen automatically.
 
 ## 💻 Usage
 
@@ -92,9 +128,11 @@ This gives you a quick file picker that:
 - Opens files directly in your editor
 - Lets you open multiple files in succession
 
-## Project Structure
+## 📁 Project Structure
 
 ```
+├── .devcontainer/
+│   └── devcontainer.json # Docker container config for Codespaces
 ├── src/
 │   └── index.ts          # Main application entry point
 ├── dist/                 # Compiled JavaScript output

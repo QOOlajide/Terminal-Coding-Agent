@@ -1,0 +1,26 @@
+{
+  "name": "Terminal Coding Agent",
+  // Using official Microsoft DevContainer image for Node.js 20 + TypeScript
+  // Provides pre-configured environment with git, node, npm, and common dev tools
+  // Alternative: Custom Dockerfile for projects requiring specialized dependencies
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-20-bullseye",
+  
+  // Automatically set up the project when container is created
+  // Installs dependencies, builds TypeScript, and links the CLI command globally
+  "postCreateCommand": "npm install && npm run build && npm link",
+  
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  },
+  
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    }
+  }
+}
+
