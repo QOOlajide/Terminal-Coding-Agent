@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import dotenv from 'dotenv';
 import inquirer from 'inquirer';
 import autocompletePrompt from 'inquirer-autocomplete-prompt';
 import { Command } from 'commander';
@@ -8,6 +9,10 @@ import { join, relative, resolve } from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as readline from 'readline';
+import { generatePlanPrompts, callOpenRouter, parsePlanResponse, formatPlan, executePlan } from './planner.js';
+
+// Load environment variables from .env file
+dotenv.config();
 
 const execAsync = promisify(exec);
 
@@ -210,6 +215,69 @@ async function smartInput(prompt: string): Promise<string> {
   });
 }
 
+// Generate, display, and execute plan
+async function generateAndDisplayPlan(userInput: string, referencedFiles: string[]): Promise<void> {
+  try {
+    console.log(chalk.blue('\n🤔 Generating execution plan...\n'));
+    
+    // Step 1: Generate prompts for the LLM
+    const { systemPrompt, userPrompt } = generatePlanPrompts(userInput, referencedFiles);
+    
+    // Step 2: Call Gemini API to get the plan
+    const llmResponse = await callOpenRouter(systemPrompt, userPrompt);
+    
+    // Step 3: Parse the LLM response into a structured plan
+    const plan = parsePlanResponse(llmResponse);
+    
+    if (!plan) {
+      console.log(chalk.red('✗ Failed to parse execution plan from LLM response'));
+      console.log(chalk.gray('\nRaw response:'));
+      console.log(llmResponse);
+      return;
+    }
+    
+    // Step 4: Format and display the plan
+    const formattedPlan = formatPlan(plan);
+    console.log(formattedPlan);
+    
+    // Step 5: Ask user if they want to execute the plan
+    console.log(chalk.yellow('\n═══════════════════════════════════════════════════\n'));
+    const executeAnswer = await inquirer.prompt([
+      {
+        type: 'confirm',
+        name: 'execute',
+        message: chalk.bold('🚀 Execute this plan now?'),
+        default: true
+      }
+    ]);
+
+    if (!executeAnswer.execute) {
+      console.log(chalk.yellow('\n⏸️  Execution cancelled. Plan was not applied.\n'));
+      return;
+    }
+
+    // Step 6: Execute the plan
+    console.log(chalk.green('\n✅ Starting execution...\n'));
+    const results = await executePlan(plan, process.cwd(), false);
+    
+    // Step 7: Display final summary
+    if (results.failedSteps.length === 0) {
+      console.log(chalk.green('\n🎉 All steps completed successfully!\n'));
+    } else {
+      console.log(chalk.yellow(`\n⚠️  Execution completed with ${results.failedSteps.length} failed step(s).\n`));
+    }
+    
+  } catch (error) {
+    console.log(chalk.red('\n✗ Error during execution:'));
+    if (error instanceof Error) {
+      console.log(chalk.red(`  ${error.message}`));
+    } else {
+      console.log(chalk.red(`  ${String(error)}`));
+    }
+    console.log();
+  }
+}
+
 // Interactive prompt with @ mentions for files
 async function interactivePrompt(): Promise<void> {
   console.log(chalk.cyan('╔════════════════════════════════════════════════════════════╗'));
@@ -224,7 +292,7 @@ async function interactivePrompt(): Promise<void> {
     console.log(chalk.yellow('───────────────────────────────────────────────────────────'));
     
     // Get user input with smart @ detection
-    const userInput = await smartInput(chalk.bold('💬 Your command: '));
+    const userInput = await smartInput(chalk.bold('💬 What changes would you like to make to your codebase? '));
 
     const trimmedInput = userInput.trim().toLowerCase();
 
@@ -271,11 +339,18 @@ async function interactivePrompt(): Promise<void> {
         console.log();
       }
 
-      console.log(chalk.gray('  💡 Command saved for processing\n'));
+      // Generate and execute plan with referenced files
+      await generateAndDisplayPlan(userInput, referencedFiles);
+    
     } else {
+      
       console.log(chalk.green('\n✓ Command received:'));
       console.log(chalk.white(`  ${userInput}\n`));
+
       console.log(chalk.gray('  💡 Tip: Use @ to reference files\n'));
+      
+      // Generate and execute plan without specific files
+      await generateAndDisplayPlan(userInput, []);
     }
   }
 }
