@@ -9,7 +9,10 @@ import { join, relative, resolve } from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as readline from 'readline';
+import { hostname } from 'os';
 import { generatePlanPrompts, callOpenRouter, parsePlanResponse, formatPlan, executePlan } from './planner.js';
+import { isAuthenticated, saveAuthToken, clearAuthToken, getUserInfo, getApiUrl } from './auth.js';
+import { initiateCliLogin, pollForAuth, getUsageStats } from './api.js';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -280,10 +283,20 @@ async function generateAndDisplayPlan(userInput: string, referencedFiles: string
 
 // Interactive prompt with @ mentions for files
 async function interactivePrompt(): Promise<void> {
+  // Check authentication first
+  if (!isAuthenticated()) {
+    console.log(chalk.yellow('⚠️  You are not authenticated.'));
+    console.log(chalk.gray('Please run: codebanger login\n'));
+    return;
+  }
+
+  const userInfo = getUserInfo();
+  
   console.log(chalk.cyan('╔════════════════════════════════════════════════════════════╗'));
   console.log(chalk.cyan('║') + chalk.bold('  Codebanger - Interactive Mode') + '              ' + chalk.cyan('║'));
   console.log(chalk.cyan('╚════════════════════════════════════════════════════════════╝'));
-  console.log(chalk.gray('\nType your instructions. Type @ to instantly select files.'));
+  console.log(chalk.gray(`\n👤 Logged in as: ${userInfo.email || 'Unknown'}`));
+  console.log(chalk.gray('Type your instructions. Type @ to instantly select files.'));
   console.log(chalk.gray('Type "exit" or "quit" to end the session.\n'));
 
   let continueLoop = true;
@@ -359,10 +372,136 @@ const program = new Command();
 
 program
   .name('codebanger')
-  .description('A TypeScript terminal coding agent with @ file mentions')
+  .description('AI-powered terminal coding agent with subscription management')
   .version('1.0.0')
   .action(async () => {
     await interactivePrompt();
+  });
+
+// Login command
+program
+  .command('login')
+  .description('Authenticate with your Codebanger account')
+  .option('-e, --email <email>', 'Your email address')
+  .action(async (options) => {
+    try {
+      let email = options.email;
+      
+      if (!email) {
+        const answer = await inquirer.prompt([
+          {
+            type: 'input',
+            name: 'email',
+            message: 'Enter your email:',
+            validate: (input) => {
+              const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+              return emailRegex.test(input) || 'Please enter a valid email';
+            }
+          }
+        ]);
+        email = answer.email;
+      }
+
+      console.log(chalk.blue('\n🔐 Initiating login...\n'));
+
+      // Initiate login
+      const { magicUrl, pollToken } = await initiateCliLogin(email, hostname());
+
+      console.log(chalk.green('✓ Magic link generated!'));
+      console.log(chalk.gray('\nOpening browser for authentication...'));
+      
+      // Open browser with magic link
+      try {
+        await execAsync(`start "" "${magicUrl}"`);
+      } catch {
+        console.log(chalk.yellow('\nCould not open browser automatically.'));
+        console.log(chalk.gray('Please visit this URL to authenticate:\n'));
+        console.log(chalk.cyan(magicUrl));
+      }
+
+      console.log(chalk.gray('\n⏳ Waiting for authentication (timeout in 2 minutes)...\n'));
+
+      // Poll for authentication
+      const authToken = await pollForAuth(pollToken);
+
+      // Save token
+      saveAuthToken(authToken, email);
+
+      console.log(chalk.green('\n✅ Successfully authenticated!'));
+      console.log(chalk.gray(`   Email: ${email}`));
+      console.log(chalk.gray('\nYou can now use: codebanger\n'));
+
+    } catch (error) {
+      console.log(chalk.red('\n✗ Authentication failed'));
+      if (error instanceof Error) {
+        console.log(chalk.red(`   ${error.message}\n`));
+      }
+    }
+  });
+
+// Logout command
+program
+  .command('logout')
+  .description('Log out of your Codebanger account')
+  .action(() => {
+    if (!isAuthenticated()) {
+      console.log(chalk.yellow('\n⚠️  You are not logged in\n'));
+      return;
+    }
+
+    clearAuthToken();
+    console.log(chalk.green('\n✓ Successfully logged out\n'));
+  });
+
+// Status command
+program
+  .command('status')
+  .description('Check authentication status and usage')
+  .action(async () => {
+    if (!isAuthenticated()) {
+      console.log(chalk.yellow('\n⚠️  Not authenticated'));
+      console.log(chalk.gray('Run: codebanger login\n'));
+      return;
+    }
+
+    try {
+      const userInfo = getUserInfo();
+      const usage = await getUsageStats();
+
+      console.log(chalk.cyan('\n╔════════════════════════════════════════════════════════════╗'));
+      console.log(chalk.cyan('║') + chalk.bold('  Account Status') + '                                  ' + chalk.cyan('║'));
+      console.log(chalk.cyan('╚════════════════════════════════════════════════════════════╝\n'));
+
+      console.log(chalk.bold('📧 Email:'), userInfo.email);
+      console.log(chalk.bold('📦 Plan:'), usage.plan.toUpperCase());
+      
+      if (usage.subscriptionStatus) {
+        console.log(chalk.bold('✅ Status:'), usage.subscriptionStatus);
+      }
+
+      console.log(chalk.bold('\n📊 This Month:'));
+      console.log(`   Executions: ${usage.currentMonth.executions}`);
+      console.log(`   Tokens: ${usage.currentMonth.tokensUsed.toLocaleString()}`);
+      console.log(`   Cost: $${usage.currentMonth.cost.toFixed(4)}`);
+
+      if (usage.limits) {
+        console.log(chalk.bold('\n⚡ Limits:'));
+        console.log(`   Remaining: ${usage.limits.remaining}/${usage.limits.executions} executions`);
+        
+        if (usage.limits.remaining < 3) {
+          console.log(chalk.yellow('\n⚠️  You\'re running low on free executions!'));
+          console.log(chalk.gray(`   Upgrade at: ${getApiUrl().replace('/api', '')}/pricing\n`));
+        }
+      }
+
+      console.log();
+
+    } catch (error) {
+      console.log(chalk.red('\n✗ Failed to get status'));
+      if (error instanceof Error) {
+        console.log(chalk.red(`   ${error.message}\n`));
+      }
+    }
   });
 
 program

@@ -382,68 +382,18 @@ export function formatPlan(plan: ExecutionPlan): string {
 export async function callOpenRouter(
   systemPrompt: string,
   userPrompt: string,
-  model: string = 'gemini-2.5-pro'
+  model: string = 'gemini-2.0-flash-exp'
 ): Promise<string> {
-  // STEP 11A: Validate environment variable
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY environment variable is not set');
-  }
-
-  // STEP 11B: Prepare API request payload for Gemini
-  // Gemini doesn't have separate system/user roles, so combine the prompts
-  const combinedPrompt = `${systemPrompt}\n\n${userPrompt}`;
+  // Call backend API instead of Gemini directly
+  // This routes through subscription management and usage tracking
+  const { executeRequest } = await import('./api.js');
   
-  const requestBody = {
-    contents: [
-      {
-        parts: [
-          {
-            text: combinedPrompt
-          }
-        ]
-      }
-    ],
-    generationConfig: {
-      temperature: 0.7,
-      topK: 40,
-      topP: 0.95,
-      maxOutputTokens: 8192,
-    }
-  };
-
-  // STEP 11C: Make HTTP POST request to Gemini
   try {
-    const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`;
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestBody)
-    });
-
-    // STEP 11D: Check if request was successful
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Gemini API request failed (${response.status}): ${errorText}`);
-    }
-
-    // STEP 11E: Parse response JSON
-    const data = await response.json();
-    
-    // STEP 11F: Extract message content from response
-    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!content) {
-      throw new Error('No content in Gemini response');
-    }
-
-    return content;
+    const result = await executeRequest(systemPrompt, userPrompt, model);
+    return result.content;
   } catch (error) {
-    // STEP 11G: Handle network errors or parsing failures
     if (error instanceof Error) {
-      throw new Error(`Failed to call Gemini API: ${error.message}`);
+      throw new Error(`Failed to execute request: ${error.message}`);
     }
     throw error;
   }
